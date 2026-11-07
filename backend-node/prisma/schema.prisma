@@ -1,0 +1,75 @@
+generator cliente {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model outfit_logs {
+  id                                                           Int                        @id @default(autoincrement())
+  user_id                                                      Int
+  temp_celsius                                                 Float                      @db.Float
+  weather_condition                                            String                     @db.VarChar(50)
+  occasion                                                     String                     @db.VarChar(50)
+  top_item_id                                                  Int
+  bottom_item_id                                               Int
+  footwear_item_id                                             Int
+  outerwear_item_id                                            Int?
+  user_feedback                                                outfit_logs_user_feedback? @default(accepted)
+  created_at                                                   DateTime?                  @default(now()) @db.Timestamp(0)
+  users                                                        users                      @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "outfit_logs_ibfk_1")
+  wardrobe_items_outfit_logs_top_item_idTowardrobe_items       wardrobe_items             @relation("outfit_logs_top_item_idTowardrobe_items", fields: [top_item_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "outfit_logs_ibfk_2")
+  wardrobe_items_outfit_logs_bottom_item_idTowardrobe_items    wardrobe_items             @relation("outfit_logs_bottom_item_idTowardrobe_items", fields: [bottom_item_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "outfit_logs_ibfk_3")
+  wardrobe_items_outfit_logs_footwear_item_idTowardrobe_items  wardrobe_items             @relation("outfit_logs_footwear_item_idTowardrobe_items", fields: [footwear_item_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "outfit_logs_ibfk_4")
+  wardrobe_items_outfit_logs_outerwear_item_idTowardrobe_items wardrobe_items?            @relation("outfit_logs_outerwear_item_idTowardrobe_items", fields: [outerwear_item_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "outfit_logs_ibfk_5")
+
+  @@index([bottom_item_id], map: "bottom_item_id")
+  @@index([footwear_item_id], map: "footwear_item_id")
+  @@index([outerwear_item_id], map: "outerwear_item_id")
+  @@index([top_item_id], map: "top_item_id")
+  @@index([user_id], map: "user_id")
+}
+
+model users {
+  id             Int              @id @default(autoincrement())
+  name           String           @db.VarChar(100)
+  email          String           @unique(map: "email") @db.VarChar(100)
+  created_at     DateTime?        @default(now()) @db.Timestamp(0)
+  outfit_logs    outfit_logs[]
+  wardrobe_items wardrobe_items[]
+}
+
+model wardrobe_items {
+  id                                                        Int                     @id @default(autoincrement())
+  user_id                                                   Int
+  name                                                      String                  @db.VarChar(100)
+  category                                                  wardrobe_items_category
+  color                                                     String                  @db.VarChar(50)
+  ideal_temp                                                Float                   @db.Float
+  formality_level                                           Int
+  rain_resistant                                            Boolean?                @default(false)
+  image_url                                                 String?                 @db.VarChar(255)
+  created_at                                                DateTime?               @default(now()) @db.Timestamp(0)
+  outfit_logs_outfit_logs_top_item_idTowardrobe_items       outfit_logs[]           @relation("outfit_logs_top_item_idTowardrobe_items")
+  outfit_logs_outfit_logs_bottom_item_idTowardrobe_items    outfit_logs[]           @relation("outfit_logs_bottom_item_idTowardrobe_items")
+  outfit_logs_outfit_logs_footwear_item_idTowardrobe_items  outfit_logs[]           @relation("outfit_logs_footwear_item_idTowardrobe_items")
+  outfit_logs_outfit_logs_outerwear_item_idTowardrobe_items outfit_logs[]           @relation("outfit_logs_outerwear_item_idTowardrobe_items")
+  users                                                     users                   @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "wardrobe_items_ibfk_1")
+
+  @@index([user_id], map: "user_id")
+}
+
+enum wardrobe_items_category {
+  top
+  bottom
+  footwear
+  outerwear
+}
+
+enum outfit_logs_user_feedback {
+  accepted
+  swapped
+  rejected
+}
