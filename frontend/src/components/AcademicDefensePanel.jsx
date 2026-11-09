@@ -51,7 +51,7 @@ export default function AcademicDefensePanel({
           className={`banca-tab-btn ${abaProf === "frontend" ? "active" : ""}`}
           onClick={() => setAbaProf("frontend")}
         >
-          🎨 3. Prof. Frontend (IHC, Estado & Rigging 2.5D)
+          🎨 3. Prof. Design Web & Frontend (Checklist Expotech)
         </button>
       </div>
 
@@ -180,41 +180,49 @@ export default function AcademicDefensePanel({
       )}
 
       {/* ===================================================================
-          ABA 3: PROFESSOR DE FRONTEND & IHC
+          ABA 3: PROFESSOR DE DESIGN WEB & FRONTEND (CHECKLIST EXPOTECH)
           =================================================================== */}
       {abaProf === "frontend" && (
         <div className="banca-content-grid">
           <div className="banca-card">
-            <h4>🎨 Engenharia de Interface, Estado Reativo & UX Zero-Fricção</h4>
+            <h4>🎨 1. Psicologia (Hick, Fitts, Miller) & 2. Semântica HTML5</h4>
             <ul className="banca-list">
               <li>
-                <strong>Redução de Carga Cognitiva (IHC):</strong> Substituímos formulários complexos (sliders manuais de clima e formalidade) por uma interface conversacional guiada por geolocalização automática e rolagem suave (<code>useRef</code> + <code>scrollIntoView</code>) em fluxo de 2 atos.
+                <strong>Lei de Hick:</strong> Eliminamos dezenas de filtros manuais de clima e formalidade, concentrando a decisão em <strong>1 único campo conversacional</strong> com detecção automática de clima.
               </li>
               <li>
-                <strong>Arquitetura de Componentes Desacoplada:</strong> Camada de serviço HTTP isolada em <code>src/api.js</code>, estado global de sessão em <code>App.jsx</code> (com controle de peças já exibidas <code>seenIds</code> para evitar repetição no <em>Swap</em>) e componentes visuais puros.
+                <strong>Lei de Fitts:</strong> O botão principal <em>"Montar Meu Look"</em> possui largura total (<code>width: 100%</code>) colado ao campo de texto, e os botões <em>"↻ Outra opção"</em> ficam sobre a própria imagem da peça (distância mínima e área de clique ampla).
               </li>
               <li>
-                <strong>Upload Local em Base64 (<code>FileReader API</code>):</strong> Permite que o usuário fotografe sua própria roupa e veja a peça real imediatamente no Provador Virtual sem depender de buckets externos pagos.
+                <strong>Lei de Miller (Chunking 7±2):</strong> Navegação dividida em <strong>3 abas</strong>, <strong>4 sugestões rápidas</strong> e <strong>até 4 peças</strong> agrupadas no Provador.
+              </li>
+              <li>
+                <strong>Semântica HTML5, H1–H4 e Formulários:</strong> Estrutura com{" "}
+                <code>&lt;header&gt;</code>, <code>&lt;nav&gt;</code>, <code>&lt;main&gt;</code>,{" "}
+                <code>&lt;section&gt;</code>, <code>&lt;aside&gt;</code>, <code>&lt;article&gt;</code> e{" "}
+                <code>&lt;footer&gt;</code>; hierarquia lógica de <code>&lt;h1&gt;</code> a{" "}
+                <code>&lt;h3&gt;</code>; inputs validados (<code>required</code>, <code>minLength</code>) com{" "}
+                <code>&lt;label htmlFor&gt;</code> acessíveis.
               </li>
             </ul>
           </div>
 
           <div className="banca-card">
-            <h4>🤖 Rigging 2.5D & State Machine (<code>RobotMascotRive.jsx</code>)</h4>
-            <p className="banca-text">
-              Para enriquecer a Interação Humano-Computador (IHC) e criar uma identidade visual autoral, desenvolvemos um mascote interativo inspirado no motor <strong>Rive</strong>:
-            </p>
+            <h4>✨ 3. CSS Box Model & 🚀 4. SEO, Boas Práticas e Rigging 2.5D</h4>
             <ul className="banca-list">
               <li>
-                <strong>Recorte Alpha & Visor Limpo:</strong> A imagem original passou por <em>Flood-Fill</em> matricial para remoção do fundo preto preservando a camiseta preta e gerando uma camada de visor translúcida (<code>logo-visor-clean.png</code>).
+                <strong>CSS Box Model & Responsividade:</strong> Reset global{" "}
+                <code>box-sizing: border-box</code>, variáveis de cor em <code>:root</code> (alto contraste WCAG AAA <code>#F8FAFC</code> sobre <code>#050507</code>), layout híbrido com{" "}
+                <strong>CSS Grid + Flexbox</strong> e <code>@media</code> queries para mobile e desktop.
               </li>
               <li>
-                <strong>Eye Tracking Matemático + Perspectiva 3D:</strong> O evento global{" "}
-                <code>mousemove</code> calcula o vetor normalizado <code>(dx, dy)</code> entre o centro do robô e o cursor do usuário, aplicando rotação 3D CSS (<code>perspective(700px) rotateX/Y</code>) no corpo e translação vetorial nos olhos SVG neon com filtro <code>feGaussianBlur</code>.
+                <strong>SEO & Acessibilidade:</strong> Meta tags completas no <code>index.html</code> (
+                <code>description</code>, <code>keywords</code>, <code>author</code>, <code>robots</code>,{" "}
+                <em>Open Graph</em>) e atributo <code>alt</code> descritivo em todas as imagens{" "}
+                <code>&lt;img&gt;</code>.
               </li>
               <li>
-                <strong>Máquina de Estados Visual:</strong> Transiciona automaticamente entre os estados{" "}
-                <code>idle</code> (flutuação + piscada a cada 3.4s), <code>thinking</code> (radares giratórios durante requisições assíncronas) e <code>jump/expression</code> ao clique.
+                <strong>Mascote Interativo (<code>RobotMascotRive.jsx</code>):</strong> Recorte Alpha PNG transparente + olhos vetoriais SVG com <em>Eye Tracking</em> via evento <code>mousemove</code> e rotação 3D CSS (<code>perspective(700px) rotateX/Y</code>).
               </li>
             </ul>
           </div>

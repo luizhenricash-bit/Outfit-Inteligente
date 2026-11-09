@@ -177,10 +177,15 @@ export default function MannequinPreview({
             const hex = getColorHex(item.color);
 
             return (
-              <div className="piece-fashion-card" key={`${cat}-${item.id}`}>
+              <article className="piece-fashion-card" key={`${cat}-${item.id}`}>
                 <div className="piece-img-wrap">
-                  <img src={getGarmentImageUrl(item)} alt={item.name} className="piece-img" />
+                  <img
+                    src={getGarmentImageUrl(item)}
+                    alt={`Peça recomendada: ${item.name} na cor ${item.color}`}
+                    className="piece-img"
+                  />
                   <button
+                    type="button"
                     className="btn-swap-floating"
                     onClick={() => onSwap(cat, item.id)}
                     disabled={loadingSwap === cat}
@@ -194,7 +199,7 @@ export default function MannequinPreview({
                     <span style={{ fontSize: "0.7rem", color: "#64748b", fontWeight: 600 }}>
                       {CATEGORY_CLEAN_NAME[cat]}
                     </span>
-                    <div className="piece-title">{item.name}</div>
+                    <h3 className="piece-title">{item.name}</h3>
                     {modoProfessor && (
                       <div style={{ fontSize: "0.72rem", color: "#94a3b8", marginTop: 2 }}>
                         Ideal {item.ideal_temp}°C • Form. {item.formality_level}/5
@@ -203,7 +208,7 @@ export default function MannequinPreview({
                   </div>
                   <i className="color-dot" style={{ backgroundColor: hex }} title={item.color} />
                 </div>
-              </div>
+              </article>
             );
           })}
         </div>

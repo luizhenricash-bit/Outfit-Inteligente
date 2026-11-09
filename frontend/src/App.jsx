@@ -248,18 +248,22 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      {/* TOPBAR COMPACTA ESTILO APP REAL */}
+      {/* TOPBAR COMPACTA ESTILO APP REAL (HTML5 SEMÂNTICO: HEADER + H1 + NAV) */}
       <header className="app-topbar">
         <div className="brand-group">
-          <img src="/logo-nobg.png" alt="Outfit Mascote" className="brand-avatar" />
+          <img
+            src="/logo-nobg.png"
+            alt="Logotipo Mascote 3D do Outfit Inteligente"
+            className="brand-avatar"
+          />
           <div>
-            <span className="brand-wordmark">
+            <h1 className="brand-wordmark" style={{ margin: 0 }}>
               Outfit <span className="brand-dot">Inteligente</span>
-            </span>
+            </h1>
           </div>
         </div>
 
-        <nav className="topbar-nav">
+        <nav className="topbar-nav" aria-label="Menu Principal">
           <button
             className={`topbar-tab ${activeTab === "provador" ? "active" : ""}`}
             onClick={() => setActiveTab("provador")}
@@ -374,11 +378,26 @@ export default function App() {
               </p>
             </div>
 
-            {/* COMPOSITOR DE PEDIDO */}
-            <div className="chat-composer">
+            {/* COMPOSITOR DE PEDIDO (FORMULÁRIO COM LABEL ACESSÍVEL + LEI DE HICK & FITTS) */}
+            <form
+              className="chat-composer"
+              onSubmit={(e) => {
+                e.preventDefault();
+                gerarLook(temperatura, chovendo, descricaoUsuario, true);
+              }}
+            >
               <div className="composer-box">
+                <label
+                  htmlFor="prompt-estilo"
+                  style={{ fontSize: "0.74rem", fontWeight: 600, color: "#94a3b8" }}
+                >
+                  Descreva seu compromisso e preferência de estilo:
+                </label>
                 <textarea
+                  id="prompt-estilo"
                   rows={2}
+                  required
+                  minLength={3}
                   className="composer-textarea"
                   value={descricaoUsuario}
                   onChange={(e) => setDescricaoUsuario(e.target.value)}
@@ -392,8 +411,8 @@ export default function App() {
                 />
                 <div className="composer-footer">
                   <button
+                    type="submit"
                     className="btn-primary-violet"
-                    onClick={() => gerarLook(temperatura, chovendo, descricaoUsuario, true)}
                     disabled={loadingLook}
                   >
                     {loadingLook ? "Montando seu visual..." : "Montar Meu Look"}
@@ -401,9 +420,10 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="suggestion-chips">
+              <div className="suggestion-chips" role="group" aria-label="Sugestões rápidas de ocasião">
                 {EXEMPLOS_PEDIDOS.map((ex, i) => (
                   <button
+                    type="button"
                     key={i}
                     className="chip-btn"
                     onClick={() => {
@@ -415,13 +435,14 @@ export default function App() {
                   </button>
                 ))}
               </div>
-            </div>
+            </form>
           </aside>
 
           {/* TELA DO PROVADOR (PARA ONDE A TELA DESCE COM O ROBÔ FALANDO NO BALÃO!) */}
           <section
             ref={resultadoRef}
             key={animKey}
+            aria-label="Provador Virtual e Recomendação"
             style={{ display: "flex", flexDirection: "column", scrollMarginTop: "20px" }}
           >
             {resultadoIA && (
@@ -442,117 +463,134 @@ export default function App() {
         </main>
       )}
 
-      {/* ABA 2: GUARDA-ROUPA */}
+      {/* ABA 2: GUARDA-ROUPA (HTML5 SEMÂNTICO: MAIN + SECTION + FORM VALIDADO COM LABELS) */}
       {activeTab === "guarda-roupa" && (
-        <div className="wardrobe-grid-layout animate-fade-up">
-          <form className="studio-card" onSubmit={handleCadastrarPeca}>
-            <h3 style={{ fontSize: "1.2rem", marginBottom: 16 }}>Adicionar Peça ao Guarda-Roupa</h3>
-
-            <div className="studio-field">
-              <label>Nome da peça</label>
-              <input
-                className="studio-input"
-                placeholder="Ex: Jaqueta Jeans, Camisa Preta..."
-                value={novoItem.name}
-                onChange={(e) => setNovoItem({ ...novoItem, name: e.target.value })}
-                required
-              />
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div className="studio-field">
-                <label>Categoria</label>
-                <select
-                  className="studio-select"
-                  value={novoItem.category}
-                  onChange={(e) => setNovoItem({ ...novoItem, category: e.target.value })}
-                >
-                  <option value="top">Parte de Cima</option>
-                  <option value="bottom">Parte de Baixo</option>
-                  <option value="footwear">Calçado</option>
-                  <option value="outerwear">Casaco / Moletom</option>
-                </select>
-              </div>
+        <main className="wardrobe-grid-layout animate-fade-up">
+          <section aria-label="Cadastro de Nova Peça">
+            <form className="studio-card" onSubmit={handleCadastrarPeca}>
+              <h2 style={{ fontSize: "1.2rem", marginBottom: 16 }}>Adicionar Peça ao Guarda-Roupa</h2>
 
               <div className="studio-field">
-                <label>Cor principal</label>
-                <select
-                  className="studio-select"
-                  value={novoItem.color}
-                  onChange={(e) => setNovoItem({ ...novoItem, color: e.target.value })}
-                >
-                  {["preto", "branco", "azul", "cinza", "bege", "verde", "marrom", "vermelho"].map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="studio-field">
-              <label>Foto da sua roupa (do PC ou Celular)</label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleUploadFotoLocal}
-                className="studio-input"
-                style={{ fontSize: "0.78rem" }}
-              />
-              {novoItem.image_url && (
-                <img
-                  src={novoItem.image_url}
-                  alt="Preview"
-                  style={{ width: 72, height: 72, objectFit: "cover", borderRadius: 12, marginTop: 6 }}
-                />
-              )}
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div className="studio-field">
-                <label>Clima ideal ({novoItem.ideal_temp}°C)</label>
+                <label htmlFor="input-nome-peca">Nome da peça</label>
                 <input
-                  type="range"
-                  min="5"
-                  max="35"
-                  value={novoItem.ideal_temp}
-                  onChange={(e) => setNovoItem({ ...novoItem, ideal_temp: Number(e.target.value) })}
+                  id="input-nome-peca"
+                  className="studio-input"
+                  placeholder="Ex: Jaqueta Jeans, Camisa Preta..."
+                  value={novoItem.name}
+                  onChange={(e) => setNovoItem({ ...novoItem, name: e.target.value })}
+                  required
+                  minLength={2}
                 />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div className="studio-field">
+                  <label htmlFor="select-categoria">Categoria</label>
+                  <select
+                    id="select-categoria"
+                    className="studio-select"
+                    value={novoItem.category}
+                    onChange={(e) => setNovoItem({ ...novoItem, category: e.target.value })}
+                  >
+                    <option value="top">Parte de Cima</option>
+                    <option value="bottom">Parte de Baixo</option>
+                    <option value="footwear">Calçado</option>
+                    <option value="outerwear">Casaco / Moletom</option>
+                  </select>
+                </div>
+
+                <div className="studio-field">
+                  <label htmlFor="select-cor">Cor principal</label>
+                  <select
+                    id="select-cor"
+                    className="studio-select"
+                    value={novoItem.color}
+                    onChange={(e) => setNovoItem({ ...novoItem, color: e.target.value })}
+                  >
+                    {["preto", "branco", "azul", "cinza", "bege", "verde", "marrom", "vermelho"].map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div className="studio-field">
-                <label>Formalidade ({novoItem.formality_level}/5)</label>
+                <label htmlFor="input-foto-peca">Foto da sua roupa (do PC ou Celular)</label>
                 <input
-                  type="range"
-                  min="1"
-                  max="5"
-                  value={novoItem.formality_level}
-                  onChange={(e) => setNovoItem({ ...novoItem, formality_level: Number(e.target.value) })}
+                  id="input-foto-peca"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleUploadFotoLocal}
+                  className="studio-input"
+                  style={{ fontSize: "0.78rem" }}
                 />
+                {novoItem.image_url && (
+                  <img
+                    src={novoItem.image_url}
+                    alt={`Pré-visualização da peça ${novoItem.name || "selecionada"}`}
+                    style={{ width: 72, height: 72, objectFit: "cover", borderRadius: 12, marginTop: 6 }}
+                  />
+                )}
               </div>
-            </div>
 
-            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.84rem", marginBottom: 16 }}>
-              <input
-                type="checkbox"
-                checked={novoItem.rain_resistant}
-                onChange={(e) => setNovoItem({ ...novoItem, rain_resistant: e.target.checked })}
-              />
-              Protege da chuva / impermeável
-            </label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div className="studio-field">
+                  <label htmlFor="range-clima">Clima ideal ({novoItem.ideal_temp}°C)</label>
+                  <input
+                    id="range-clima"
+                    type="range"
+                    min="5"
+                    max="35"
+                    value={novoItem.ideal_temp}
+                    onChange={(e) => setNovoItem({ ...novoItem, ideal_temp: Number(e.target.value) })}
+                  />
+                </div>
 
-            <button type="submit" className="btn-primary-violet">
-              Salvar no Guarda-Roupa
-            </button>
-          </form>
+                <div className="studio-field">
+                  <label htmlFor="range-formalidade">Formalidade ({novoItem.formality_level}/5)</label>
+                  <input
+                    id="range-formalidade"
+                    type="range"
+                    min="1"
+                    max="5"
+                    value={novoItem.formality_level}
+                    onChange={(e) => setNovoItem({ ...novoItem, formality_level: Number(e.target.value) })}
+                  />
+                </div>
+              </div>
 
-          <div className="catalog-grid">
+              <label
+                htmlFor="check-impermeavel"
+                style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.84rem", marginBottom: 16 }}
+              >
+                <input
+                  id="check-impermeavel"
+                  type="checkbox"
+                  checked={novoItem.rain_resistant}
+                  onChange={(e) => setNovoItem({ ...novoItem, rain_resistant: e.target.checked })}
+                />
+                Protege da chuva / impermeável
+              </label>
+
+              <button type="submit" className="btn-primary-violet">
+                Salvar no Guarda-Roupa
+              </button>
+            </form>
+          </section>
+
+          <section className="catalog-grid" aria-label="Acervo de Roupas Cadastradas">
             {wardrobe.map((item) => (
-              <div className="catalog-item-card" key={item.id}>
-                <img src={getGarmentImageUrl(item)} alt={item.name} className="catalog-item-photo" />
+              <article className="catalog-item-card" key={item.id}>
+                <img
+                  src={getGarmentImageUrl(item)}
+                  alt={`Foto da peça ${item.name} na cor ${item.color}`}
+                  className="catalog-item-photo"
+                />
                 <div className="catalog-item-body">
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}>
-                    <h4 style={{ fontSize: "0.95rem" }}>{item.name}</h4>
+                    <h3 style={{ fontSize: "0.95rem" }}>{item.name}</h3>
                     <button
                       onClick={() => handleRemoverPeca(item.id)}
                       style={{
@@ -571,58 +609,70 @@ export default function App() {
                     <span style={{ textTransform: "capitalize" }}>{item.color}</span>
                   </div>
                 </div>
-              </div>
+              </article>
             ))}
-          </div>
-        </div>
+          </section>
+        </main>
       )}
 
       {/* ABA 3: FAVORITOS / HISTÓRICO */}
       {activeTab === "historico" && (
-        <div className="studio-card animate-fade-up">
-          <h3 style={{ fontSize: "1.25rem", marginBottom: 16 }}>Seus Looks Favoritos</h3>
+        <main className="studio-card animate-fade-up">
+          <section aria-label="Histórico de Looks Favoritos">
+            <h2 style={{ fontSize: "1.25rem", marginBottom: 16 }}>Seus Looks Favoritos</h2>
 
-          {history.length === 0 ? (
-            <p style={{ color: "#94a3b8" }}>
-              Você ainda não salvou nenhum look. Clique em "♥ Salvar Look" lá no Provador!
-            </p>
-          ) : (
-            <div className="catalog-grid">
-              {history.map((h) => (
-                <div className="catalog-item-card" key={h.id} style={{ padding: 16 }}>
-                  <div style={{ fontSize: "0.75rem", color: "#a855f7", fontWeight: 700 }}>
-                    {(h.occasion || "casual").toUpperCase()} • {h.temp_celsius ?? h.temperature_c}°C
-                  </div>
-                  <div style={{ display: "flex", gap: 6, marginTop: 10, marginBottom: 8 }}>
-                    {[h.outerwear, h.top, h.bottom, h.footwear]
-                      .filter(Boolean)
-                      .map((peca, idx) => (
-                        <img
-                          key={idx}
-                          src={getGarmentImageUrl(peca)}
-                          alt={peca.name}
-                          style={{
-                            width: 44,
-                            height: 44,
-                            objectFit: "cover",
-                            borderRadius: 10,
-                            border: "1px solid rgba(255,255,255,0.14)",
-                          }}
-                        />
-                      ))}
-                  </div>
-                  <ul style={{ listStyle: "none", marginTop: 6, fontSize: "0.86rem", lineHeight: 1.7 }}>
-                    {h.outerwear && <li>🧥 {h.outerwear.name}</li>}
-                    {h.top && <li>👕 {h.top.name}</li>}
-                    {h.bottom && <li>👖 {h.bottom.name}</li>}
-                    {h.footwear && <li>👟 {h.footwear.name}</li>}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+            {history.length === 0 ? (
+              <p style={{ color: "#94a3b8" }}>
+                Você ainda não salvou nenhum look. Clique em "♥ Salvar Look" lá no Provador!
+              </p>
+            ) : (
+              <div className="catalog-grid">
+                {history.map((h) => (
+                  <article className="catalog-item-card" key={h.id} style={{ padding: 16 }}>
+                    <h3 style={{ fontSize: "0.75rem", color: "#a855f7", fontWeight: 700 }}>
+                      {(h.occasion || "casual").toUpperCase()} • {h.temp_celsius ?? h.temperature_c}°C
+                    </h3>
+                    <div style={{ display: "flex", gap: 6, marginTop: 10, marginBottom: 8 }}>
+                      {[h.outerwear, h.top, h.bottom, h.footwear]
+                        .filter(Boolean)
+                        .map((peca, idx) => (
+                          <img
+                            key={idx}
+                            src={getGarmentImageUrl(peca)}
+                            alt={`Miniatura da peça ${peca.name}`}
+                            style={{
+                              width: 44,
+                              height: 44,
+                              objectFit: "cover",
+                              borderRadius: 10,
+                              border: "1px solid rgba(255,255,255,0.14)",
+                            }}
+                          />
+                        ))}
+                    </div>
+                    <ul style={{ listStyle: "none", marginTop: 6, fontSize: "0.86rem", lineHeight: 1.7 }}>
+                      {h.outerwear && <li>🧥 {h.outerwear.name}</li>}
+                      {h.top && <li>👕 {h.top.name}</li>}
+                      {h.bottom && <li>👖 {h.bottom.name}</li>}
+                      {h.footwear && <li>👟 {h.footwear.name}</li>}
+                    </ul>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+        </main>
       )}
+
+      {/* RODAPÉ SEMÂNTICO (HTML5 FOOTER — CHECKLIST DESIGN WEB EXPOTECH) */}
+      <footer className="app-footer">
+        <p>
+          <strong>Outfit Inteligente</strong> • Projeto Acadêmico Expotech (Design Web, Backend & Machine Learning)
+        </p>
+        <p style={{ fontSize: "0.74rem", color: "#64748b" }}>
+          Semântica HTML5 • Psicologia Cognitiva (Leis de Hick, Fitts & Miller) • Clima Ao Vivo via Open-Meteo API
+        </p>
+      </footer>
     </div>
   );
 }
