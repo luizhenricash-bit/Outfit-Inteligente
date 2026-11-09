@@ -16,6 +16,7 @@ class RequisicaoLook(BaseModel):
     chovendo: bool
     ocasiao: str
     formalidade: Optional[int] = None
+    descricao_usuario: Optional[str] = ""
 
 class RequisicaoTroca(BaseModel):
     categoria: str
@@ -23,6 +24,7 @@ class RequisicaoTroca(BaseModel):
     temperatura: float
     ocasiao: str
     formalidade: Optional[int] = None
+    descricao_usuario: Optional[str]= ""
 
 
 @app.get("/")
@@ -37,11 +39,12 @@ def rota_recomendar(req: RequisicaoLook):
     Recebe clima e ocasião, executa o K-Means e retorna o look completo.
     """
     try:
-        resultado = recomendar_look_completo(
+        resultado = recomendar_look_completo (
             temperatura=req.temperatura,
             chovendo=req.chovendo,
             ocasiao=req.ocasiao,
-            formalidade=req.formalidade
+            formalidade=req.formalidade,
+            descricao_usuario=req.descricao_usuario or ""
         )
         return resultado
     except Exception as e:
@@ -59,7 +62,8 @@ def rota_trocar(req: RequisicaoTroca):
             peca_atual_id=req.peca_atual_id,
             temperatura=req.temperatura,
             ocasiao=req.ocasiao,
-            formalidade=req.formalidade
+            formalidade=req.formalidade,
+            descricao_usuario=req.descricao_usuario or ""
         )
         return resultado
     except Exception as e:

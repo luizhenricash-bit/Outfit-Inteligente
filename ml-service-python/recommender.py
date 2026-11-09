@@ -5,11 +5,9 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.cluster import KMeans
 
-# 1. Conexão com o MySQL
 DB_URL = "mysql+pymysql://outfit_inteligente:outfit123@localhost:3306/outfit_db"
 engine = create_engine(DB_URL)
 
-# 2. Régua de formalidade padrão
 FORMALIDADE_POR_OCASIAO = {
     "casual": 3,
     "trabalho": 5,
@@ -19,167 +17,310 @@ FORMALIDADE_POR_OCASIAO = {
     "date": 4,
 }
 
-def carregar_dados_e_treinar():
-    """Busca as roupas do MySQL e treina o modelo K-Means."""
-    query = "SELECT id, name, category, color, ideal_temp, formality_level, rain_resistant FROM wardrobe_items;"
-    df = pd.read_sql(query, engine)
+MAPA_OCASIOES_TEXTO = {
+    "date": ["namorada", "namorado", "encontro", "date", "jantar", "romântico", "romantico"],
+    "trabalho": ["trabalhar", "trabalho", "reunião", "reuniao", "escritório", "escritorio", "entrevista", "profissional"],
+    "evento_formal": ["casamento", "formatura", "gala", "social", "dress code", "terno"],
+    "festa": ["festa", "balada", "aniversário", "aniversario", "barzinho", "show", "evento"],
+    "esporte": ["academia", "treino", "treinar", "correr", "corrida", "esporte", "parque", "caminhada"],
+    "casual": ["faculdade", "aula", "passear", "passeio", "shopping", "mercado", "casa", "casual", "dia a dia"],
+}
 
+TERMOS_PECAS = [
+    "moletom", "jaqueta", "sobretudo", "casaco", "blusa",
+    "camisa social", "camisa polo", "polo", "camiseta", "camisa",
+    "alfaiataria", "chino", "jeans", "bermuda", "calça", "calca",
+    "sapato", "sapatênis", "sapatenis", "tênis", "tenis", "bota", "chinelo", "sandália"
+]
+
+TOM_CLARO = ["branco", "bege", "azul", "cinza"]
+TOM_ESCURO = ["preto", "cinza", "marrom", "azul"]
+CORES_NEUTRAS = ["preto", "branco", "cinza", "bege"]
+
+
+def interpretar_pedido_usuario(texto: str):
+    """
+    Extrai ocasião, cores, paleta de tons, peças específicas citadas pelo nome
+    (ex: 'moletom', 'jaqueta') e condições climáticas da frase escrita pelo usuário.
+    """
+    if not texto or not texto.strip():
+        return {
+            "ocasiao_detectada": None,
+            "cores_diretas": [],
+            "paleta_tom": [],
+            "pecas_citadas": [],
+            "pediu_agasalho": False,
+            "condicional_chuva": False,
+            "resumo_entendido": "",
+        }
+
+    t = texto.lower()
+
+    # 1. Ocasião
+    ocasiao_detectada = None
+    for ocasiao, palavras in MAPA_OCASIOES_TEXTO.items():
+        if any(p in t for p in palavras):
+            ocasiao_detectada = ocasiao
+            break
+
+    # 2. Cores citadas
+    radicais_cor = {
+        "preto": ["preto", "preta", "all black"],
+        "branco": ["branco", "branca"],
+        "azul": ["azul", "azuis"],
+        "cinza": ["cinza"],
+        "bege": ["bege", "areia", "caqui", "creme"],
+        "verde": ["verde"],
+        "marrom": ["marrom", "terroso", "cafe"],
+        "vermelho": ["vermelho", "vermelha", "vinho"],
+    }
+    cores_diretas = [cor for cor, termos in radicais_cor.items() if any(termo in t for termo in termos)]
+
+    # 3. Paleta de tons
+    paleta_tom = []
+    nome_tom = ""
+    if any(p in t for p in ["neutro", "neutra", "neutros", "neutras", "basico", "básico", "discreto"]):
+        paleta_tom = CORES_NEUTRAS
+        nome_tom = "tons neutros"
+    elif any(p in t for p in ["tom claro", "tons claros", "claro", "clara", "leve", "suave"]):
+        paleta_tom = TOM_CLARO
+        nome_tom = "tons claros"
+    elif any(p in t for p in ["tom escuro", "tons escuros", "escuro", "escura", "sobrio", "sóbrio"]):
+        paleta_tom = TOM_ESCURO
+        nome_tom = "tons escuros"
+
+    # 4. Peças específicas pedidas pelo usuário (ex: "quero um moletom")
+    pecas_citadas = [termo for termo in TERMOS_PECAS if termo in t]
+    pediu_agasalho = any(p in t for p in ["moletom", "jaqueta", "sobretudo", "casaco", "agasalho", "frio"])
+    condicional_chuva = any(p in t for p in ["se estiver", "se chover", "condições de chuva", "condicoes de chuva", "caso chova"])
+
+    partes = []
+    if ocasiao_detectada:
+        partes.append(f"ocasião '{ocasiao_detectada}'")
+    if nome_tom:
+        partes.append(f"paleta em {nome_tom}")
+    if cores_diretas:
+        partes.append(f"cor ({', '.join(cores_diretas)})")
+    if pecas_citadas:
+        partes.append(f"peça solicitada ({', '.join(pecas_citadas)})")
+
+    resumo = "Interpretado do seu pedido: " + ", ".join(partes) + "." if partes else ""
+
+    return {
+        "ocasiao_detectada": ocasiao_detectada,
+        "cores_diretas": cores_diretas,
+        "paleta_tom": paleta_tom,
+        "pecas_citadas": pecas_citadas,
+        "pediu_agasalho": pediu_agasalho,
+        "condicional_chuva": condicional_chuva,
+        "resumo_entendido": resumo,
+    }
+
+
+def carregar_dados_e_treinar():
+    query = "SELECT id, name, category, color, ideal_temp, formality_level, rain_resistant, image_url FROM wardrobe_items;"
+    df = pd.read_sql(query, engine)
+    df['image_url'] = df['image_url'].fillna('')
+
+    n_clusters = min(3, len(df)) if len(df) > 0 else 1
     preprocessor = ColumnTransformer(transformers=[
         ('num', StandardScaler(), ['ideal_temp', 'formality_level', 'rain_resistant']),
         ('cat', OneHotEncoder(), ['category', 'color'])
     ])
-
     X = preprocessor.fit_transform(df)
 
-    # K=3 definido pelo método do cotovelo
-    kmeans = KMeans(n_clusters=3, random_state=42, n_init=10)
+    kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
     df['cluster'] = kmeans.fit_predict(X)
-
     return df, preprocessor, kmeans
 
+
 def contexto_do_dia(temperatura, chovendo, ocasiao, formalidade=None):
-    """Transforma o 'dia' em um ponto no mesmo formato das roupas."""
     if formalidade is None:
         formalidade = FORMALIDADE_POR_OCASIAO.get(ocasiao, 3)
-
     return {
         "ideal_temp": temperatura,
         "formality_level": formalidade,
         "rain_resistant": 1 if chovendo else 0
     }
 
+
 def descobrir_cluster_do_dia(dia_info, df_roupas):
-    """Calcula a distância euclidiana até os centroides e retorna o cluster mais próximo."""
     medias = df_roupas.groupby('cluster')[['ideal_temp', 'formality_level', 'rain_resistant']].mean()
     ponto_dia = np.array([dia_info['ideal_temp'], dia_info['formality_level'], dia_info['rain_resistant']])
 
     menor_distancia = float('inf')
     cluster_escolhido = None
-
     for cluster_id, row in medias.iterrows():
-        ponto_cluster = row.values
-        distancia = np.linalg.norm(ponto_dia - ponto_cluster)
-
+        distancia = np.linalg.norm(ponto_dia - row.values)
         if distancia < menor_distancia:
             menor_distancia = distancia
             cluster_escolhido = cluster_id
 
-    return cluster_escolhido, medias
+    media_c = medias.loc[cluster_escolhido]
+    temp_m = media_c['ideal_temp']
+    form_m = media_c['formality_level']
+    chuva_m = media_c['rain_resistant']
 
-def selecionar_melhor_peca(candidatos, dia_info):
-    """
-    Entre as peças candidatas, escolhe a que tem menor distância ponderada:
-    considera diferença de temperatura e formalidade.
-    """
-    if candidatos.empty:
-        return None
+    if chuva_m >= 0.5:
+        perfil = "Frio & Proteção contra Chuva"
+    elif temp_m >= 23:
+        perfil = "Calor & Leveza Casual"
+    elif form_m >= 3.6:
+        perfil = "Clima Ameno & Alinhado/Elegante"
+    else:
+        perfil = "Clima Ameno & Urbano"
 
-    def calcular_score(row):
-        diff_temp = abs(row['ideal_temp'] - dia_info['ideal_temp'])
-        diff_form = abs(row['formality_level'] - dia_info['formality_level'])
-        # Peso 2 para formalidade respeitar a ocasião
-        return diff_temp + (diff_form * 2)
+    nome_cluster = f"Cluster {int(cluster_id)} • {perfil} (Média {temp_m:.0f}°C)"
+    return cluster_escolhido, nome_cluster, medias
 
-    candidatos = candidatos.copy()
-    candidatos['score'] = candidatos.apply(calcular_score, axis=1)
-    melhor = candidatos.sort_values('score').iloc[0]
-    return melhor.to_dict()
 
-def recomendar_look_completo(temperatura, chovendo, ocasiao, formalidade=None, limiar_temp=8.0):
-    """
-    Algoritmo principal de recomendação:
-    1. Define contexto e descobre o cluster
-    2. Busca top, bottom, footwear (no cluster ou via fallback)
-    3. Adiciona outerwear se temperatura < 18°C
-    """
+def calcular_score_peca(row, dia_info, cluster_alvo=None, cores_diretas=None, paleta_tom=None, pecas_citadas=None, tem_casaco=False):
+    cores_diretas = cores_diretas or []
+    paleta_tom = paleta_tom or []
+    pecas_citadas = pecas_citadas or []
+
+    peso_temp = 0.45 if (tem_casaco and row['category'] == 'top' and dia_info['ideal_temp'] < 18) else 1.0
+    diff_temp = abs(row['ideal_temp'] - dia_info['ideal_temp']) * peso_temp
+    diff_form = abs(row['formality_level'] - dia_info['formality_level']) * 3.5
+
+    score = diff_temp + diff_form
+
+    if cluster_alvo is not None and row.get('cluster') == cluster_alvo:
+        score -= 3.5
+
+    if dia_info['rain_resistant'] == 1 and row['rain_resistant'] == 1:
+        score -= 6.0
+
+    cor_peca = str(row['color']).lower().strip()
+    if cor_peca in cores_diretas:
+        score -= 8.0
+    if cor_peca in paleta_tom:
+        score -= 4.5
+    elif (cores_diretas or paleta_tom) and cor_peca in CORES_NEUTRAS:
+        score -= 1.5
+
+    # Super Bônus quando o usuário pede uma peça específica pelo nome (ex: "quero um moletom")
+    nome_peca = str(row['name']).lower()
+    if any(termo in nome_peca for termo in pecas_citadas):
+        score -= 18.0
+
+    return score
+
+
+def recomendar_look_completo(temperatura, chovendo, ocasiao, formalidade=None, descricao_usuario="", limiar_temp=10.0):
     df, _, _ = carregar_dados_e_treinar()
-    dia = contexto_do_dia(temperatura, chovendo, ocasiao, formalidade)
-    cluster_id, _ = descobrir_cluster_do_dia(dia, df)
+    if df.empty:
+        return {"erro": "Seu guarda-roupa está vazio! Cadastre peças primeiro."}
 
-    pecas_do_cluster = df[df['cluster'] == cluster_id]
+    interpretacao = interpretar_pedido_usuario(descricao_usuario)
+    ocasiao_final = interpretacao["ocasiao_detectada"] or ocasiao
+    formalidade_final = FORMALIDADE_POR_OCASIAO.get(ocasiao_final, 3) if interpretacao["ocasiao_detectada"] else formalidade
+
+    dia = contexto_do_dia(temperatura, chovendo, ocasiao_final, formalidade_final)
+    cluster_id, cluster_nome, _ = descobrir_cluster_do_dia(dia, df)
+
+    # Inclui sobreposição/casaco se estiver frio (< 18°C), chovendo/risco de chuva, ou se o usuário pediu agasalho/moletom
+    tem_casaco = (dia['ideal_temp'] < 18) or bool(chovendo) or interpretacao["pediu_agasalho"]
     look = {}
     avisos = []
 
-    categorias_obrigatorias = ['top', 'bottom', 'footwear']
+    if interpretacao["resumo_entendido"]:
+        avisos.append(interpretacao["resumo_entendido"])
 
-    for cat in categorias_obrigatorias:
-        # 1. Tentar achar no cluster
-        candidatos = pecas_do_cluster[pecas_do_cluster['category'] == cat]
+    if tem_casaco:
+        cand_casaco = df[df['category'] == 'outerwear'].copy()
+        if not cand_casaco.empty:
+            cand_casaco['score'] = cand_casaco.apply(
+                lambda r: calcular_score_peca(
+                    r, dia, cluster_id,
+                    interpretacao["cores_diretas"],
+                    interpretacao["paleta_tom"],
+                    interpretacao["pecas_citadas"],
+                    True
+                ),
+                axis=1
+            )
+            look['outerwear'] = cand_casaco.sort_values('score').iloc[0].to_dict()
+        else:
+            look['outerwear'] = None
+    else:
+        look['outerwear'] = None
 
-        # Se for calçado e estiver chovendo, filtrar preferencialmente impermeável
+    for cat in ['top', 'bottom', 'footwear']:
+        candidatos = df[df['category'] == cat].copy()
+        if candidatos.empty:
+            look[cat] = None
+            continue
+
         if cat == 'footwear' and dia['rain_resistant'] == 1:
             impermeaveis = candidatos[candidatos['rain_resistant'] == 1]
             if not impermeaveis.empty:
                 candidatos = impermeaveis
 
-        peca_escolhida = selecionar_melhor_peca(candidatos, dia)
+        candidatos['score'] = candidatos.apply(
+            lambda r: calcular_score_peca(
+                r, dia, cluster_id,
+                interpretacao["cores_diretas"],
+                interpretacao["paleta_tom"],
+                interpretacao["pecas_citadas"],
+                tem_casaco
+            ),
+            axis=1
+        )
+        melhor = candidatos.sort_values('score').iloc[0].to_dict()
+        look[cat] = melhor
 
-        # 2. Se não achou no cluster, usar o Fallback no guarda-roupa inteiro
-        if peca_escolhida is None:
-            candidatos_geral = df[df['category'] == cat]
+    nomes_pecas = [p['name'] for p in [look.get('outerwear'), look.get('top'), look.get('bottom'), look.get('footwear')] if p]
+    clima_txt = f"{temperatura:.0f}°C com condição/risco de chuva" if chovendo else f"{temperatura:.0f}°C e tempo firme"
 
-            if cat == 'footwear' and dia['rain_resistant'] == 1:
-                impermeaveis_geral = candidatos_geral[candidatos_geral['rain_resistant'] == 1]
-                if not impermeaveis_geral.empty:
-                    candidatos_geral = impermeaveis_geral
+    explicacao = f"Verifiquei o clima em tempo real ({clima_txt}). Para o seu compromisso ({ocasiao_final}), recomendo: {', '.join(nomes_pecas)}."
 
-            peca_fallback = selecionar_melhor_peca(candidatos_geral, dia)
+    if interpretacao.get("paleta_tom") or interpretacao.get("cores_diretas"):
+        explicacao += " Selecionei uma combinação harmônica em tons neutros/solicitados."
 
-            if peca_fallback is not None:
-                diff_temp = abs(peca_fallback['ideal_temp'] - dia['ideal_temp'])
-                if diff_temp <= limiar_temp:
-                    peca_escolhida = peca_fallback
-                    avisos.append(f"A peça '{peca_fallback['name']}' foi trazida de outro grupo (diferença de {diff_temp:.1f}°C).")
-                else:
-                    avisos.append(f"Aviso: Você não tem uma peça de {cat} ideal para {temperatura}°C (limiar de {limiar_temp}°C excedido).")
-
-        look[cat] = peca_escolhida
-
-    # 3. Regra de Camadas: Casaco obrigatório se temperatura < 18°C
-    if dia['ideal_temp'] < 18:
-        candidatos_casaco = pecas_do_cluster[pecas_do_cluster['category'] == 'outerwear']
-        if candidatos_casaco.empty:
-            candidatos_casaco = df[df['category'] == 'outerwear']
-        
-        casaco = selecionar_melhor_peca(candidatos_casaco, dia)
-        look['outerwear'] = casaco
-    else:
-        look['outerwear'] = None
+    if look.get("outerwear"):
+        if chovendo:
+            explicacao += f" Como há condições de chuva/céu carregado, incluí '{look['outerwear']['name']}' para você levar, exatamente como pediu!"
+        else:
+            explicacao += f" Incluí '{look['outerwear']['name']}' como sobreposição para você levar por precaução!"
 
     return {
         "contexto": dia,
+        "ocasiao_usada": ocasiao_final,
         "cluster_id": int(cluster_id),
+        "cluster_nome": cluster_nome,
         "look": look,
-        "avisos": avisos
+        "explicacao_ia": explicacao,
+        "interpretacao": interpretacao,
+        "avisos": avisos,
     }
 
-def trocar_peca(categoria, peca_atual_id, temperatura, ocasiao, formalidade=None):
-    """
-    Substitui uma peça do look por outra alternativa válida do guarda-roupa.
-    Exclui a peça atual e busca a melhor opção seguinte.
-    """
+
+def trocar_peca(categoria, peca_atual_id, temperatura, ocasiao, formalidade=None, descricao_usuario=""):
     df, _, _ = carregar_dados_e_treinar()
-    dia = contexto_do_dia(temperatura, chovendo=False, ocasiao=ocasiao, formalidade=formalidade)
+    interpretacao = interpretar_pedido_usuario(descricao_usuario)
+    ocasiao_final = interpretacao["ocasiao_detectada"] or ocasiao
+    dia = contexto_do_dia(temperatura, chovendo=False, ocasiao=ocasiao_final, formalidade=formalidade)
+    cluster_id, _, _ = descobrir_cluster_do_dia(dia, df)
 
-    # Filtrar roupas da mesma categoria, excluindo a peça atual
-    candidatos = df[(df['category'] == categoria) & (df['id'] != peca_atual_id)]
-
+    candidatos = df[(df['category'] == categoria) & (df['id'] != peca_atual_id)].copy()
     if candidatos.empty:
         return {
             "sucesso": False,
-            "mensagem": f"Você não tem outra peça de {categoria} cadastrada no guarda-roupa."
+            "mensagem": f"Você não possui outra opção de {categoria} cadastrada no guarda-roupa."
         }
 
-    # Calcula a pontuação para cada candidato alternativo
-    def calcular_score(row):
-        diff_temp = abs(row['ideal_temp'] - dia['ideal_temp'])
-        diff_form = abs(row['formality_level'] - dia['formality_level'])
-        return diff_temp + (diff_form * 2)
-
-    candidatos = candidatos.copy()
-    candidatos['score'] = candidatos.apply(calcular_score, axis=1)
-    
-    # Ordena do mais compatível para o menos
+    tem_casaco = (dia['ideal_temp'] < 18) or interpretacao["pediu_agasalho"]
+    candidatos['score'] = candidatos.apply(
+        lambda r: calcular_score_peca(
+            r, dia, cluster_id,
+            interpretacao["cores_diretas"],
+            interpretacao["paleta_tom"],
+            interpretacao["pecas_citadas"],
+            tem_casaco
+        ),
+        axis=1
+    )
     candidatos_ordenados = candidatos.sort_values('score')
     nova_peca = candidatos_ordenados.iloc[0].to_dict()
 
@@ -187,47 +328,5 @@ def trocar_peca(categoria, peca_atual_id, temperatura, ocasiao, formalidade=None
         "sucesso": True,
         "nova_peca": nova_peca,
         "outras_opcoes": candidatos_ordenados[['id', 'name', 'color']].to_dict(orient='records'),
-        "mensagem": f"Substituído com sucesso por '{nova_peca['name']}'."
+        "mensagem": f"Substituí por '{nova_peca['name']}' ({nova_peca['color']}) — mantém o equilíbrio térmico e o estilo da ocasião!"
     }
-
-
-# --- TESTE PRÁTICO DO LOOK COMPLETO E TROCA ---
-if __name__ == "__main__":
-    print("✨ Testando Gerador de Look Completo...\n")
-
-    # Teste 1: Frio, sem chuva, Trabalho
-    resultado1 = recomendar_look_completo(temperatura=15, chovendo=False, ocasiao="trabalho")
-    print("==================================================")
-    print(f"👔 Look 1: 15°C, Trabalho | Cluster: {resultado1['cluster_id']}")
-    for cat, peca in resultado1['look'].items():
-        nome = peca['name'] if peca else "Nenhum"
-        print(f"  - {cat.upper()}: {nome}")
-    if resultado1['avisos']:
-        print("  📢 Avisos:", resultado1['avisos'])
-
-    # Teste 2: Calor, Casual
-    resultado2 = recomendar_look_completo(temperatura=28, chovendo=False, ocasiao="casual")
-    print("\n==================================================")
-    print(f"☀️ Look 2: 28°C, Casual | Cluster: {resultado2['cluster_id']}")
-    for cat, peca in resultado2['look'].items():
-        nome = peca['name'] if peca else "Nenhum"
-        print(f"  - {cat.upper()}: {nome}")
-    if resultado2['avisos']:
-        print("  📢 Avisos:", resultado2['avisos'])
-
-    # Teste 3: Chuva e Frio Intenso (Fallback de 8°C)
-    resultado3 = recomendar_look_completo(temperatura=10, chovendo=True, ocasiao="trabalho")
-    print("\n==================================================")
-    print(f"🌧️ Look 3: 10°C, Chuva, Trabalho | Cluster: {resultado3['cluster_id']}")
-    for cat, peca in resultado3['look'].items():
-        nome = peca['name'] if peca else "Nenhum"
-        print(f"  - {cat.upper()}: {nome}")
-    if resultado3['avisos']:
-        print("  📢 Avisos:", resultado3['avisos'])
-
-    # Teste 4: Troca de Peça (Substituir a Calça Alfaiataria id=4)
-    print("\n==================================================")
-    print("🔄 Testando Troca de Peça: Trocar a Calça Alfaiataria (id=4)")
-    troca = trocar_peca(categoria='bottom', peca_atual_id=4, temperatura=15, ocasiao='trabalho')
-    print("Resultado da troca:", troca['mensagem'])
-    print("Nova peça escolhida:", troca['nova_peca']['name'], f"({troca['nova_peca']['color']})")

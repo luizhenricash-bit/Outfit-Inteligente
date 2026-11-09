@@ -8,10 +8,10 @@ const prisma = new PrismaClient();
 
 const PORT = process.env.PORT || 3001;
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL || "http://127.0.0.1:8001";
-const DEFAULT_USER_ID = 1; // Usuário padrão criado no seed.sql
+const DEFAULT_USER_ID = 1;
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
 
 // ============================================================================
 // 1. STATUS DOS SERVIÇOS (MySQL via Prisma + Serviço Python ML)
@@ -41,46 +41,107 @@ app.get("/api/health", async (req, res) => {
 });
 
 // ============================================================================
-// 2. CLIMA REAL DA CIDADE (Open-Meteo API gratuita + Fallback Offline)
+// 2. CLIMA REAL EXATO (GPS / IP / Cidade via Open-Meteo API)
 // ============================================================================
-app.get("/api/weather", async (req, res) => {
-  const city = req.query.city || "São Paulo";
-  try {
-    const geoRes = await fetch(
-      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=pt&format=json`
-    );
-    const geoData = await geoRes.json();
+async function buscarCoordenadasPorCidade(city) {
+  const geoRes = await fetch(
+    `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=pt&format=json`
+  );
+  const geoData = await geoRes.json();
+  if (!geoData.results || geoData.results.length === 0) {
+    throw new Error(`Cidade '${city}' não encontrada.`);
+  }
+  const { latitude, longitude, name, admin1 } = geoData.results[0];
+  return {
+    latitude,
+    longitude,
+    cidadeNome: admin1 ? `${name}, ${admin1}` : name,
+  };
+}
 
-    if (!geoData.results || geoData.results.length === 0) {
-      return res.status(404).json({ erro: `Cidade '${city}' não encontrada.` });
+app.get("/api/weather", async (req, res) => {
+  const rawQuery = (req.query.city || "auto").trim();
+  try {
+    let latitude, longitude, cidadeNome;
+
+    if (rawQuery.startsWith("gps:")) {
+      const [latStr, lonStr] = rawQuery.replace("gps:", "").split(",");
+      latitude = parseFloat(latStr);
+      longitude = parseFloat(lonStr);
+
+      try {
+        const revRes = await fetch(
+          `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=pt`
+        );
+        const revData = await revRes.json();
+        const city = revData.city || revData.locality || "Sua Localização";
+        const state = revData.principalSubdivisionCode?.split("-")[1] || revData.principalSubdivision || "";
+        cidadeNome = state ? `${city}, ${state}` : city;
+      } catch {
+        cidadeNome = "Sua Localização (GPS)";
+      }
+    } else if (rawQuery.toLowerCase() === "auto" || rawQuery === "") {
+      // Tenta descobrir a cidade pelo IP; se falhar, busca São Paulo na Open-Meteo (nunca cai em número fixo!)
+      try {
+        const ipRes = await fetch("https://ipwho.is/");
+        const ipData = await ipRes.json();
+        if (ipData && ipData.success && ipData.latitude && ipData.longitude) {
+          latitude = Number(ipData.latitude);
+          longitude = Number(ipData.longitude);
+          cidadeNome = ipData.region_code ? `${ipData.city}, ${ipData.region_code}` : ipData.city;
+        }
+      } catch {}
+
+      if (!latitude || !longitude) {
+        const fallbackGeo = await buscarCoordenadasPorCidade("São Paulo");
+        latitude = fallbackGeo.latitude;
+        longitude = fallbackGeo.longitude;
+        cidadeNome = fallbackGeo.cidadeNome;
+      }
+    } else {
+      const coords = await buscarCoordenadasPorCidade(rawQuery);
+      latitude = coords.latitude;
+      longitude = coords.longitude;
+      cidadeNome = coords.cidadeNome;
     }
 
-    const { latitude, longitude, name, admin1 } = geoData.results[0];
     const weatherRes = await fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,precipitation,weather_code&timezone=auto`
+      `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,apparent_temperature,precipitation,rain,showers,weather_code,cloud_cover&timezone=auto`
     );
     const weatherData = await weatherRes.json();
 
+    if (!weatherData || !weatherData.current) {
+      throw new Error("Resposta inválida da Open-Meteo");
+    }
+
     const temp = Math.round(weatherData.current.temperature_2m);
+    const sensacao = Math.round(weatherData.current.apparent_temperature ?? temp);
     const code = weatherData.current.weather_code;
-    const chovendo = weatherData.current.precipitation > 0 || code >= 51;
+    const nuvens = weatherData.current.cloud_cover ?? 0;
+    const chovendo =
+      (weatherData.current.precipitation || 0) > 0 ||
+      (weatherData.current.rain || 0) > 0 ||
+      code >= 51;
+    const riscoChuva = chovendo || nuvens >= 75 || (code >= 45 && code <= 99);
 
     res.json({
-      cidade: admin1 ? `${name}, ${admin1}` : name,
+      cidade: cidadeNome,
       temperatura: temp,
+      sensacao_termica: sensacao,
       chovendo,
-      condicao: chovendo ? "Chuva / Instável" : temp < 18 ? "Frio / Ameno" : "Ensolarado / Limpo",
-      fonte: "Open-Meteo (Tempo Real)",
+      risco_chuva: riscoChuva,
+      nuvens_pct: nuvens,
+      condicao: chovendo
+        ? "Chovendo agora"
+        : riscoChuva
+        ? `Nublado / Risco de chuva (${nuvens}% nuvens)`
+        : temp < 18
+        ? "Frio / Tempo firme"
+        : "Tempo firme / Limpo",
+      fonte: "Open-Meteo Live API",
     });
-  } catch {
-    // Fallback caso esteja sem internet na hora da apresentação
-    res.json({
-      cidade: city,
-      temperatura: 20,
-      chovendo: false,
-      condicao: "Clima Ameno (Modo Offline)",
-      fonte: "Simulador Local",
-    });
+  } catch (err) {
+    res.status(500).json({ erro: "Não foi possível consultar o clima real: " + err.message });
   }
 });
 
@@ -101,7 +162,7 @@ app.get("/api/wardrobe", async (req, res) => {
 
 app.post("/api/wardrobe", async (req, res) => {
   try {
-    const { name, category, color, ideal_temp, formality_level, rain_resistant } = req.body;
+    const { name, category, color, ideal_temp, formality_level, rain_resistant, image_url } = req.body;
 
     if (!name || !category || !color) {
       return res.status(400).json({ erro: "Preencha nome, categoria e cor da peça." });
@@ -116,6 +177,7 @@ app.post("/api/wardrobe", async (req, res) => {
         ideal_temp: Number(ideal_temp),
         formality_level: Number(formality_level),
         rain_resistant: Boolean(rain_resistant),
+        image_url: image_url || null,
       },
     });
 
@@ -128,7 +190,6 @@ app.post("/api/wardrobe", async (req, res) => {
 app.delete("/api/wardrobe/:id", async (req, res) => {
   const id = Number(req.params.id);
   try {
-    // Remove primeiro eventuais logs que apontem para essa peça (respeitando FK)
     await prisma.$transaction([
       prisma.outfit_logs.deleteMany({
         where: {
@@ -176,18 +237,17 @@ app.post("/api/recommend", async (req, res) => {
 
 app.post("/api/swap", async (req, res) => {
   try {
-    const { categoria, peca_atual_id, temperatura, ocasiao, formalidade, ids_vistos = [] } = req.body;
+    const { categoria, peca_atual_id, temperatura, ocasiao, formalidade, descricao_usuario = "", ids_vistos = [] } = req.body;
 
     const respostaML = await fetch(`${ML_SERVICE_URL}/api/swap`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ categoria, peca_atual_id, temperatura, ocasiao, formalidade }),
+      body: JSON.stringify({ categoria, peca_atual_id, temperatura, ocasiao, formalidade, descricao_usuario }),
     });
 
     const dados = await respostaML.json();
     if (!dados.sucesso) return res.json(dados);
 
-    // Rodízio inteligente: evita ficar indo e voltando entre apenas 2 peças
     const opcoes = dados.outras_opcoes || [];
     const proximaOpcao = opcoes.find((op) => !ids_vistos.includes(op.id)) || opcoes[0];
 
@@ -202,7 +262,7 @@ app.post("/api/swap", async (req, res) => {
             ...pecaCompleta,
             rain_resistant: pecaCompleta.rain_resistant ? 1 : 0,
           },
-          mensagem: `Substituído por '${pecaCompleta.name}' (compatível com o clima/ocasião).`,
+          mensagem: `Substituí por '${pecaCompleta.name}' (${pecaCompleta.color}) — mantém o conforto térmico e respeita o estilo do seu pedido!`,
         });
       }
     }
@@ -218,19 +278,37 @@ app.post("/api/swap", async (req, res) => {
 // ============================================================================
 app.post("/api/history", async (req, res) => {
   try {
-    const { temp_celsius, weather_condition, occasion, top_item_id, bottom_item_id, footwear_item_id, outerwear_item_id, user_feedback } = req.body;
+    const {
+      temp_celsius,
+      temperature_c,
+      weather_condition,
+      is_raining,
+      occasion,
+      top_item_id,
+      bottom_item_id,
+      footwear_item_id,
+      outerwear_item_id,
+      user_feedback,
+      was_swapped,
+    } = req.body;
+
+    const tempFinal = Number(temp_celsius ?? temperature_c ?? 20);
+    const condicaoFinal =
+      weather_condition || (is_raining ? "Chuva / Nublado" : "Tempo seco");
+    const feedbackFinal =
+      user_feedback || (was_swapped ? "swapped" : "accepted");
 
     const log = await prisma.outfit_logs.create({
       data: {
         user_id: DEFAULT_USER_ID,
-        temp_celsius: Number(temp_celsius),
-        weather_condition: String(weather_condition),
-        occasion: String(occasion),
+        temp_celsius: Number.isNaN(tempFinal) ? 20 : tempFinal,
+        weather_condition: String(condicaoFinal),
+        occasion: String(occasion || "casual"),
         top_item_id: Number(top_item_id),
         bottom_item_id: Number(bottom_item_id),
         footwear_item_id: Number(footwear_item_id),
         outerwear_item_id: outerwear_item_id ? Number(outerwear_item_id) : null,
-        user_feedback: user_feedback || "accepted",
+        user_feedback: feedbackFinal,
       },
     });
     res.status(201).json(log);
@@ -272,7 +350,9 @@ app.get("/api/history", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
+  try {
+    await prisma.$executeRawUnsafe("ALTER TABLE wardrobe_items MODIFY image_url LONGTEXT");
+  } catch {}
   console.log(`🚀 Backend Node.js + Prisma rodando em http://localhost:${PORT}`);
 });
-    
