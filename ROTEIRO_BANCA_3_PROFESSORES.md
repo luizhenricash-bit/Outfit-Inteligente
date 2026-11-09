@@ -1,85 +1,181 @@
-# 🎓 Guia Mestre de Apresentação — Defesa para os 3 Professores
+# 🎤 Manual Completo de Defesa — Pitch + Códigos Comentados para os 3 Professores
 
-Este documento foi preparado sob medida para você apresentar o **Outfit Inteligente** três vezes, adaptando o vocabulário técnico, os arquivos do VS Code que você vai abrir e a demonstração ao vivo para **cada um dos 3 professores**:
-
-> 💡 **Dica de Ouro antes de começar qualquer uma das 3 apresentações:**  
-> No canto superior direito do site (`http://localhost:5173`), clique no botão **`🎓 Modo Banca (3 Profs)`**!  
-> Ele abre um painel interativo no topo da tela com **3 abas exclusivas** (`1. Prof. Machine Learning`, `2. Prof. Backend`, `3. Prof. Frontend`) contendo o gráfico do Método do Cotovelo, o payload JSON em tempo real e a explicação arquitetural de cada disciplina!
+Este guia contém o **Pitch Oficial de Abertura** e os **trechos reais do seu código** nas 3 matérias, explicando **linha por linha o que fazem** e **o que responder quando o professor perguntar: *"Por que você fez dessa forma?"***.
 
 ---
 
-## ⚙️ APRESENTAÇÃO 1: Professor de Backend (Java / Arquitetura / API / ORM)
+## 🚀 1. O PITCH DO OUTFIT INTELIGENTE (Como começar todas as 3 apresentações — 45 segundos)
 
-### 1. O que um Professor de Backend / Java mais valoriza?
-Professores de Backend que vêm do mundo **Java (Spring Boot / JPA / Hibernate)** avaliam se você entende **engenharia de software, separação de camadas, tipagem de dados, mapeamento objeto-relacional (ORM), integridade referencial no banco de dados e comunicação entre serviços**.
+> **O que falar ao abrir a tela inicial do sistema:**  
+> *"Bom dia/Boa noite, professor! Todos os dias as pessoas perdem tempo abrindo o guarda-roupa e o aplicativo de clima no celular tentando decidir o que vestir para o trabalho, para a faculdade ou para um jantar — e muitas vezes saem com a roupa errada para a temperatura ou para a chuva.*  
+> *Para resolver isso, eu desenvolvi o **Outfit Inteligente**: um Personal Stylist e Provador Virtual que funciona com **Zero-Fricção**. Assim que o usuário abre o sistema, ele captura automaticamente a geolocalização e consulta a API meteorológica **Open-Meteo** em tempo real (trazendo temperatura, sensação térmica e porcentagem de nuvens/risco de chuva). O usuário só precisa digitar em português natural para onde vai — por exemplo, 'Vou levar minha namorada para jantar, quero uma roupa neutra e se tiver risco de chuva quero levar um moletom' — e a nossa Inteligência Artificial analisa o guarda-roupa real cadastrado no banco MySQL e monta o look completo no Provador Virtual com as fotos reais das roupas do usuário!"*
 
-### 2. Como explicar sua Arquitetura usando o vocabulário dele (2 minutos):
-1. **Padrão Arquitetural *Polyglot Microservices + API Gateway (BFF)*:**
-   > *"Professor, em vez de construir um monolito acoplado, projetamos uma arquitetura em **Microsserviços Poliglotas** com um **API Gateway (Backend-for-Frontend)** na porta `3001` e um **Microsserviço Analítico de IA** na porta `8001`, ambos compartilhando o banco relacional **MySQL 8.0 (`outfit_db`)** na porta `3306`."*
-2. **Paralelo direto com Java / Spring Boot / Hibernate:**
-   - **No Backend Principal ([`backend-node/server.js`](./backend-node/server.js)):**
-     - Usamos **Prisma ORM** ([`backend-node/prisma/schema.prisma`](./backend-node/prisma/schema.prisma)), que cumpre exatamente o papel do **JPA / Hibernate** no Java: ele faz a introspecção do schema relacional do MySQL, garante tipagem estática das entidades (`users`, `wardrobe_items`, `outfit_logs`) e gerencia as *Foreign Keys* (chaves estrangeiras com `ON DELETE CASCADE` e `NO ACTION`).
-   - **No Microsserviço de IA ([`ml-service-python/main.py`](./ml-service-python/main.py)):**
-     - Usamos **FastAPI + Pydantic**, onde as classes `RecommendRequest` e `SwapRequest` funcionam exatamente como os **DTOs (*Data Transfer Objects*) com *Bean Validation*** do Java: se o JSON enviado pelo Gateway não tiver os tipos corretos (`float`, `bool`, `str`), a requisição é rejeitada automaticamente com HTTP `422 Unprocessable Entity` antes de chegar na regra de negócio.
-3. **Orquestração e Tratamento de Exceções em Camadas:**
-   - Mostre no [`backend-node/server.js`](./backend-node/server.js) a rota `GET /api/weather`: o backend consome uma API REST externa real (**Open-Meteo**), possui blocos `try/catch` isolados para *Graceful Degradation* (se o serviço de geolocalização por IP falhar, ele faz *fallback* automático para geocodificação sem derrubar o servidor) e retorna códigos HTTP semânticos (`200 OK`, `201 Created`, `400 Bad Request`, `502 Bad Gateway`, `503 Service Unavailable`).
-
-### 3. Quais arquivos abrir no VS Code se o Professor de Backend pedir para ver código:
-1. [`database/schema.sql`](./database/schema.sql) — Mostre a modelagem relacional (3 tabelas, tipos `ENUM`, chaves primárias e as 4 *Foreign Keys* na tabela `outfit_logs` apontando para `wardrobe_items`).
-2. [`backend-node/prisma/schema.prisma`](./backend-node/prisma/schema.prisma) — Mostre as entidades mapeadas pelo ORM e os relacionamentos bidirecionais.
-3. [`backend-node/server.js`](./backend-node/server.js) — Mostre o CRUD transacional (`POST /api/wardrobe`, `POST /api/history` com `include` fazendo o `JOIN` das 4 peças do look) e a orquestração HTTP para a porta `8001`.
-4. [`ml-service-python/main.py`](./ml-service-python/main.py) — Mostre os DTOs tipados (`class RecommendRequest(BaseModel)`).
-
-### 4. Pergunta Difícil que ele pode fazer (e sua Resposta Matadora):
-* **Pergunta:** *"Por que você tem dois acessos ao banco (Prisma no Node e SQLAlchemy no Python) em vez de um só?"*
-* **Sua Resposta:** *"Aplicamos uma separação inspirada em **CQRS (Command Query Responsibility Segregation)**: todas as operações de **Comando/Escrita transacional (CRUD)** passam exclusivamente pelo **Prisma ORM** no Gateway (porta `3001`), garantindo integridade de estado. Já o microsserviço de Machine Learning (porta `8001`) possui acesso **somente leitura (Read-Only Query)** via `SQLAlchemy` para carregar a matriz de atributos diretamente na memória do `Pandas DataFrame`, evitando trafegar milhares de registros via rede a cada inferência."*
+*(Nesse momento, clique em **"Montar Meu Look"**, deixe a tela deslizar suavemente até o Provador, mostre o robô falando no balão, troque uma peça clicando em **"↻ Outra opção"** e clique em **`🎓 Modo Banca (3 Profs)`** no canto superior direito!)*
 
 ---
 
-## 🎨 APRESENTAÇÃO 2: Professor de Frontend & Interfaces (UI/UX / Estado / Componentes)
+## 🧠 2. MATÉRIA 1: MACHINE LEARNING (K-Means, Pré-Processamento & Gráfico do Cotovelo)
 
-### 1. O que o Professor de Frontend mais valoriza?
-Ele avalia **usabilidade (IHC / redução de carga cognitiva), componentização limpa, gerenciamento de estado assíncrono, consumo de API REST (`fetch`/`async-await`), responsividade e interatividade visual**.
+### Trecho de Código 1: O Método do Cotovelo ([`ml-service-python/elbow_analysis.py`](./ml-service-python/elbow_analysis.py))
+```python
+inertias = []
+valores_k = range(1, 9)
 
-### 2. Como apresentar o Frontend para ele (2 minutos):
-1. **Decisão de UX / IHC — "Zero-Fricção" e Fluxo em 2 Atos:**
-   > *"Professor, na primeira versão tínhamos dezenas de sliders manuais de temperatura e formalidade. Percebemos que isso gerava alta carga cognitiva e cara de formulário genérico. Reduzimos a interface para **Zero-Fricção**: o navegador captura a localização via API de Geolocalização/IP, busca o clima real sozinho, e o usuário só digita em linguagem natural para onde vai. Quando clica em 'Montar Meu Look', usamos o Hook `useRef` com `scrollIntoView({ behavior: 'smooth' })` para conduzir o olhar do usuário suavemente até o Provador."*
-2. **Animação Interativa 2.5D estilo Rive ([`RobotMascotRive.jsx`](./frontend/src/components/RobotMascotRive.jsx)):**
-   - Mexa o mouse pela tela e clique no robô!
-   - Explique como foi feito no código:
-     > *"Não é um GIF nem um vídeo pesado! Nós recortamos o fundo preto da imagem gerando uma camada PNG transparente com o visor limpo (`logo-visor-clean.png`), e sobrepusemos um **SVG vetorial com filtro `feGaussianBlur` (efeito neon)** para desenhar os olhos do robô em tempo real. Um listener global `mousemove` calcula o delta normalizado `(dx, dy)` entre o centro do componente (`getBoundingClientRect()`) e o cursor do mouse, aplicando rotação 3D CSS (`perspective(700px) rotateX/rotateY`) no corpo e movendo os olhos dentro do visor! Além disso, ele tem uma máquina de estados reativa (`isThinking`, `blinking`, `expression`, `jumping`)."*
-3. **Gerenciamento de Estado Assíncrono e Prevenção de Repetição (`seenIds`):**
-   - Vá ao Provador e clique em **"↻ Outra opção"** em uma peça.
-   - Explique: *"Em [`App.jsx`](./frontend/src/App.jsx), mantemos o estado `seenIds` por categoria (`top`, `bottom`, `footwear`, `outerwear`). Quando o usuário pede para trocar só a camisa, fazemos uma atualização imutável de estado trocando apenas a chave `[categoria]` do objeto `look` sem recarregar a página inteira, e enviamos o array `ids_vistos` para o backend garantir que a próxima peça sugerida seja inédita."*
-4. **Upload Local de Fotos com `FileReader API`:**
-   - Mostre a aba **`Guarda-Roupa`** com a foto real do seu **Moletom preto**: usamos a API nativa `FileReader.readAsDataURL()` do navegador para converter a foto do usuário em `Base64` com preview instantâneo antes mesmo de enviar via `POST /api/wardrobe`.
+for k in valores_k:
+    kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
+    kmeans.fit(X_preparado)
+    inertias.append(kmeans.inertia_)
+```
 
-### 3. Quais arquivos abrir no VS Code para o Professor de Frontend:
-1. [`frontend/src/api.js`](./frontend/src/api.js) — Mostre a camada de serviço isolada (Clean Code: nenhum `fetch` solto no meio do HTML/JSX).
-2. [`frontend/src/components/RobotMascotRive.jsx`](./frontend/src/components/RobotMascotRive.jsx) — Mostre o cálculo matemático do `handleMouseMove` e os estados do SVG.
-3. [`frontend/src/components/MannequinPreview.jsx`](./frontend/src/components/MannequinPreview.jsx) — Mostre a composição do Provador, o balão de fala do stylist e os cards das peças.
-4. [`frontend/src/App.jsx`](./frontend/src/App.jsx) — Mostre os Hooks (`useState`, `useEffect`, `useRef`) orquestrando o fluxo completo.
+* **❓ Se o professor perguntar: *"O que é esse Gráfico do Cotovelo e por que você escolheu $K = 3$ dessa forma?"***
+  * **🗣️ Sua Resposta:**
+    *"Professor, como nossas roupas no banco não tinham um rótulo de grupo pré-definido, tratamos o problema como **Aprendizado Não Supervisionado** usando **K-Means**. Só que no K-Means nós precisamos informar o número de grupos ($K$). Para não chutar um número aleatório, implementei o **Método do Cotovelo (`elbow_analysis.py`)**: eu rodei o K-Means de $K=1$ até $K=8$ medindo a `kmeans.inertia_`, que é a **WCSS (Soma dos Quadrados das Distâncias Intra-Cluster)**. Olhando o gráfico, de $K=1$ para $K=2$ e de $K=2$ para $K=3$ a inércia cai drasticamente, mas a partir de $K=3$ a curva dobra formando um 'cotovelo' (o ganho passa a ser marginal). Além disso, $K=3$ tem sentido físico perfeito no domínio de moda: (1) Frio/Chuva & Formal, (2) Clima Ameno & Trabalho, e (3) Calor & Casual."*
 
 ---
 
-## 🧠 APRESENTAÇÃO 3: Professor de Machine Learning & Ciência de Dados
+### Trecho de Código 2: Pré-Processamento (`StandardScaler` + `OneHotEncoder`) ([`ml-service-python/recommender.py`](./ml-service-python/recommender.py))
+```python
+scaler = StandardScaler()
+num_scaled = scaler.fit_transform(df[['ideal_temp', 'formality_level']])
 
-### 1. O que o Professor de Machine Learning mais valoriza?
-Ele quer saber se você **realmente usou Machine Learning (`Scikit-Learn`)** ou se fez apenas um monte de `if/else`, por que escolheu **$K = 3$** no K-Means, como tratou **variáveis em escalas diferentes** antes de calcular a Distância Euclidiana e como funciona a inferência!
+encoder = OneHotEncoder(sparse_output=False)
+color_encoded = encoder.fit_transform(df[['color']])
 
-### 2. Como apresentar o Modelo de IA para ele (2 minutos):
-1. **Abra a Aba 1 do `🎓 Modo Banca` na tela do site!**
-   - O gráfico real do **Método do Cotovelo (`grafico_cotovelo.png`)** já vai aparecer na tela!
-2. **Justificativa Matemática do $K = 3$ ([`elbow_analysis.py`](./ml-service-python/elbow_analysis.py)):**
-   > *"Professor, como o agrupamento de vestuário é um problema de **Aprendizado Não Supervisionado**, usamos o algoritmo **K-Means**. Para não escolher o hiperparâmetro $K$ no chute, criamos o script `elbow_analysis.py` que rodou o K-Means de $K=1$ até $K=8$ medindo a **Inércia (WCSS — Soma dos Quadrados das Distâncias Intra-Cluster)**. Como o gráfico mostra, a maior queda marginal ocorre até $K=3$, onde a curva forma o cotovelo, dividindo perfeitamente o guarda-roupa em 3 arquétipos: Frio/Chuva & Formal, Clima Ameno & Social, e Calor & Casual."*
-3. **Por que o Pré-Processamento (`StandardScaler` + `OneHotEncoder`) foi obrigatório ([`recommender.py`](./ml-service-python/recommender.py)):**
-   > *"O K-Means calcula a **Distância Euclidiana** no espaço $n$-dimensional. Se jogássemos os dados brutos do banco, a variável `ideal_temp` (que varia de $5$ a $35$, amplitude $30$) esmagaria o peso da variável `formality_level` (que varia apenas de $1$ a $5$, amplitude $4$). Por isso, aplicamos o **`StandardScaler` ($z = \frac{x - \mu}{\sigma}$)** nas variáveis contínuas para igualar a variância, e aplicamos **`OneHotEncoder`** na variável categórica `color` para não criar uma ordem numérica falsa entre cores (como fingir que Azul = 2 é o dobro de Preto = 1)."*
-4. **Solução do Problema de Permutação de Rótulos (*Label Switching*) do K-Means:**
-   > *"Um detalhe prático que descobrimos quando cadastramos a 16ª peça no banco: como o K-Means não tem rótulo supervisionado, o grupo que antes recebia o ID `0` mudou para o ID `1` após o retreinamento. Para resolver isso de forma definitiva, implementamos uma **Inspeção Dinâmica de Centróides** em `recommender.py`: logo após o `kmeans.fit()`, calculamos a média real de temperatura e formalidade de cada grupo gerado e atribuímos o nome semântico dinamicamente."*
-5. **Inferência Híbrida (Clusterização + Distância Euclidiana Ponderada + NLP):**
-   - Mostre no [`ml-service-python/recommender.py`](./ml-service-python/recommender.py) como o texto do usuário é vetorizado pelo interpretador NLP (`interpretar_pedido_usuario`), descobre o cluster do dia (`descobrir_cluster_do_dia`) e ranqueia as peças de cada categoria (`top`, `bottom`, `footwear`, `outerwear`) combinando o bônus de pertencer ao cluster vencedor com a Distância Euclidiana e o alinhamento cromático!
+X = np.hstack([num_scaled, color_encoded, df[['rain_resistant']].values])
+kmeans = KMeans(n_clusters=3, random_state=42, n_init=10)
+df['cluster'] = kmeans.fit_predict(X)
+```
 
-### 3. Quais arquivos abrir no VS Code para o Professor de Machine Learning:
-1. [`ml-service-python/elbow_analysis.py`](./ml-service-python/elbow_analysis.py) — Mostre o loop `for k in range(1, 9):` salvando `kmeans.inertia_`.
-2. [`ml-service-python/explore_clusters.py`](./ml-service-python/explore_clusters.py) — Mostre a análise exploratória das médias de cada cluster.
-3. [`ml-service-python/recommender.py`](./ml-service-python/recommender.py) — Mostre as funções `carregar_dados_e_treinar()` (linhas com `StandardScaler`, `OneHotEncoder`, `KMeans(n_clusters=3, random_state=42)`), `interpretar_pedido_usuario()` e `calcular_score_peca()`.
+* **❓ Se o professor perguntar: *"Por que você usou `StandardScaler` e `OneHotEncoder` antes do K-Means em vez de passar os dados direto do banco?"***
+  * **🗣️ Sua Resposta:**
+    *"Porque o K-Means agrupa os pontos usando a **Distância Euclidiana**. No meu banco de dados, a temperatura (`ideal_temp`) vai de `5` a `35` (uma variação de 30 pontos), enquanto a formalidade (`formality_level`) só vai de `1` a `5` (variação de 4 pontos). Se eu não usasse o **`StandardScaler`** para deixar as duas variáveis com média 0 e desvio padrão 1, a temperatura ia dominar quase 100% da conta matemática e o modelo ia ignorar a formalidade!*  
+    *E na coluna `color` (cor), como é texto (`'preto'`, `'azul'`, `'branco'`), o K-Means não aceita strings. Se eu colocasse números `1, 2, 3` (`LabelEncoder`), o algoritmo acharia que a cor `3` é maior que a cor `1`. Por isso usei o **`OneHotEncoder`**, que cria colunas binárias (`0` ou `1`) sem inventar hierarquia entre as cores."*
+
+---
+
+## ⚙️ 3. MATÉRIA 2: BACKEND & BANCO DE DADOS (Arquitetura, API Gateway, ORM & DTOs)
+
+### Trecho de Código 1: Persistência Relacional com Prisma ORM ([`backend-node/server.js`](./backend-node/server.js))
+```javascript
+const log = await prisma.outfit_logs.create({
+  data: {
+    user_id: DEFAULT_USER_ID,
+    temp_celsius: Number.isNaN(tempFinal) ? 20 : tempFinal,
+    weather_condition: String(condicaoFinal),
+    occasion: String(occasion || "casual"),
+    top_item_id: Number(top_item_id),
+    bottom_item_id: Number(bottom_item_id),
+    footwear_item_id: Number(footwear_item_id),
+    outerwear_item_id: outerwear_item_id ? Number(outerwear_item_id) : null,
+    user_feedback: feedbackFinal,
+  },
+});
+```
+
+* **❓ Se o professor de Backend (Java) perguntar: *"Por que você dividiu o Backend em dois serviços (porta 3001 e porta 8001) e usou Prisma ORM?"***
+  * **🗣️ Sua Resposta:**
+    *"Professor, segui o padrão de **Microsserviços com API Gateway (BFF — Backend for Frontend)**:*
+    *1. O serviço principal na porta `3001` concentra toda a regra de negócio transacional (CRUD do guarda-roupa, histórico de looks e integração externa com a API de clima Open-Meteo). Nele utilizei o **Prisma ORM**, que faz exatamente o papel do **JPA / Hibernate no Java**: ele mapeia nossas tabelas relacionais do MySQL (`users`, `wardrobe_items`, `outfit_logs`) com tipagem forte e garante a integridade das 4 **Chaves Estrangeiras (`FOREIGN KEY`)** quando salvamos um look.*
+    *2. Já o segundo serviço na porta `8001` é isolado apenas para o motor matemático de Machine Learning em Python (`FastAPI`). Assim, se o cálculo de IA crescer, ele não trava o servidor transacional principal."*
+
+---
+
+### Trecho de Código 2: Validação de Contrato / DTO ([`ml-service-python/main.py`](./ml-service-python/main.py))
+```python
+class RecommendRequest(BaseModel):
+    temperatura: float = 22.0
+    chovendo: bool = False
+    ocasiao: str = "casual"
+    formalidade: Optional[int] = None
+    descricao_usuario: Optional[str] = ""
+```
+
+* **❓ Se o professor de Backend perguntar: *"Como você garante a segurança dos dados que trafegam entre os dois servidores?"***
+  * **🗣️ Sua Resposta:**
+    *"Usamos classes baseadas em `BaseModel` (Pydantic), que funcionam exatamente como os **DTOs (Data Transfer Objects) com Bean Validation no Spring Boot**: antes mesmo de executar a função da rota `/api/recommend`, o framework valida se `temperatura` é `float` e se `chovendo` é `boolean`. Se alguém mandar um tipo inválido na requisição HTTP, a API barra na porta e devolve erro `422 Unprocessable Entity` automaticamente."*
+
+---
+
+## 🎨 4. MATÉRIA 3: FRONTEND (JavaScript ES6+, React, Consumo de API & Mascote Interativo)
+
+### Por que escolhemos usar **JavaScript com React**? (Resumo Rápido para o Professor)
+1. **É 100% JavaScript (ES6+):** Toda a lógica usa `async/await`, `fetch`, `.map()`, `.filter()` e eventos do DOM.
+2. **Componentização (Não repetir código):** O robô animado ([`RobotMascotRive.jsx`](./frontend/src/components/RobotMascotRive.jsx)) foi programado uma única vez e reutilizado tanto na tela principal quanto dentro do Provador ao lado do balão de fala.
+3. **Atualização Cirúrgica sem Recarregar a Página (*Virtual DOM*):** Quando o usuário clica em **"↻ Outra opção"** para trocar apenas o sapato, o estado do React (`useState`) atualiza somente aquele card no Provador em milissegundos, sem piscar a tela inteira.
+
+---
+
+### Trecho de Código 1: Camada Isolada de Consumo de API em JavaScript Puro ([`frontend/src/api.js`](./frontend/src/api.js))
+```javascript
+const API_BASE = "http://localhost:3001/api";
+
+async function request(endpoint, options = {}) {
+  const response = await fetch(`${API_BASE}${endpoint}`, {
+    headers: { "Content-Type": "application/json" },
+    ...options,
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.erro || data.detalhe || "Erro na comunicação com o servidor");
+  }
+  return data;
+}
+```
+
+* **❓ Se o professor de Frontend perguntar: *"Por que você criou esse arquivo `api.js` separado em vez de fazer o `fetch` direto nos botões da tela?"***
+  * **🗣️ Sua Resposta:**
+    *"Para aplicar **Clean Code e Separação de Responsabilidades (DRY — Don't Repeat Yourself)**. Em vez de repetir `fetch('http://localhost:3001/api/...')`, `headers` e tratamento de erro `if (!response.ok)` em 7 lugares diferentes da tela, centralizei toda a comunicação HTTP assíncrona (`async/await`) nessa função `request()` em JavaScript puro. Os componentes visuais apenas chamam `await api.recommendOutfit(...)` ou `await api.swapItem(...)`."*
+
+---
+
+### Trecho de Código 2: O Eye Tracking do Robô seguindo o Mouse ([`frontend/src/components/RobotMascotRive.jsx`](./frontend/src/components/RobotMascotRive.jsx))
+```javascript
+useEffect(() => {
+  function handleMouseMove(e) {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height * 0.25;
+
+    const dx = (e.clientX - centerX) / (window.innerWidth * 0.5);
+    const dy = (e.clientY - centerY) / (window.innerHeight * 0.5);
+
+    const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+    setLookOffset({
+      x: clamp(dx * 9, -8, 8),
+      y: clamp(dy * 6, -5, 6),
+      rotY: clamp(dx * 12, -11, 11),
+      rotX: clamp(-dy * 9, -8, 8),
+    });
+  }
+
+  window.addEventListener("mousemove", handleMouseMove);
+  return () => window.removeEventListener("mousemove", handleMouseMove);
+}, []);
+```
+
+* **❓ Se o professor de Frontend perguntar: *"Como você fez esse robô mexer os olhos e inclinar o corpo seguindo o mouse?"***
+  * **🗣️ Sua Resposta:**
+    *"Eu usei JavaScript puro com eventos do DOM (`window.addEventListener('mousemove')`) combinado com SVG: primeiro pegamos a posição exata do robô na tela com `getBoundingClientRect()`. Depois calculamos a distância horizontal (`dx`) e vertical (`dy`) entre o centro do visor do robô e a posição `(e.clientX, e.clientY)` do mouse do usuário. Usamos uma função `clamp` para limitar o movimento (para o olho não sair de dentro do capacete!) e aplicamos esse valor em tempo real no `transform: translate(x, y)` dos olhos vetoriais em SVG e no `rotateX / rotateY` 3D do corpo!"*
+
+---
+
+### Trecho de Código 3: Troca Inteligente de Peça sem Repetição ([`frontend/src/App.jsx`](./frontend/src/App.jsx))
+```javascript
+setResultadoIA((prev) => ({
+  ...prev,
+  look: {
+    ...prev.look,
+    [categoria]: res.nova_peca,
+  },
+}));
+setSeenIds((prev) => ({
+  ...prev,
+  [categoria]: [...(prev[categoria] || []), res.nova_peca.id],
+}));
+```
+
+* **❓ Se o professor de Frontend perguntar: *"O que esse `[categoria]: res.nova_peca` e esse `seenIds` fazem quando clica em 'Outra opção'?"***
+  * **🗣️ Sua Resposta:**
+    *"Aqui usamos **Propriedade Computada do JavaScript (`[categoria]`)** e *Spread Operator (`...`)*: se o usuário clicou para trocar só a categoria `'footwear'` (calçado), nós copiamos todo o look anterior (`...prev.look`) e substituímos apenas a propriedade `'footwear'` pela `res.nova_peca`, mantendo a camisa, a calça e o moletom intactos! E no `seenIds`, guardamos um array com os IDs que o usuário já viu naquela sessão para o backend nunca repetir a mesma peça em loop."*
