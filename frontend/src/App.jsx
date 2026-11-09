@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "./api";
+import AcademicDefensePanel from "./components/AcademicDefensePanel";
 import MannequinPreview, { getColorHex, getGarmentImageUrl } from "./components/MannequinPreview";
 import RobotMascotRive from "./components/RobotMascotRive";
 
@@ -335,12 +336,26 @@ export default function App() {
           <button
             className={`academic-toggle ${modoProfessor ? "active" : ""}`}
             onClick={() => setModoProfessor((v) => !v)}
-            title="Ative na hora de apresentar para o professor ver os dados do K-Means!"
+            title="Painel Técnico para apresentar aos 3 Professores (ML, Backend e Frontend)"
           >
-            🎓 {modoProfessor ? "Ocultar K-Means" : "Modo Banca"}
+            🎓 {modoProfessor ? "Fechar Modo Banca" : "Modo Banca (3 Profs)"}
           </button>
         </div>
       </header>
+
+      {/* PAINEL TÉCNICO INTERATIVO PARA OS 3 PROFESSORES (ML, BACKEND E FRONTEND) */}
+      {modoProfessor && (
+        <AcademicDefensePanel
+          resultadoIA={resultadoIA}
+          health={health}
+          wardrobeCount={wardrobe.length}
+          historyCount={history.length}
+          temperatura={temperatura}
+          chovendo={chovendo}
+          cidadeAtual={cidadeAtual}
+          onClose={() => setModoProfessor(false)}
+        />
+      )}
 
       {/* ABA 1: TELA PRINCIPAL (SÓ O ROBÔ + PEDIDO) -> DESCE PARA O PROVADOR COM O ROBÔ FALANDO! */}
       {activeTab === "provador" && (

@@ -834,3 +834,174 @@ h1, h2, h3, h4, .font-display {
     transform: translateY(0);
   }
 }
+
+
+/* =========================================================
+   PAINEL TÉCNICO DE DEFESA PARA OS 3 PROFESSORES (MODO BANCA)
+   ========================================================= */
+.banca-panel {
+  background: linear-gradient(165deg, rgba(20, 18, 32, 0.96), rgba(11, 11, 18, 0.98));
+  border: 1px solid rgba(168, 85, 247, 0.45);
+  border-radius: 22px;
+  padding: 20px 24px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65), 0 0 28px rgba(139, 92, 246, 0.16);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.banca-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.banca-kicker {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: #c084fc;
+}
+
+.banca-close-btn {
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #e2e8f0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.banca-close-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #ef4444;
+  color: #ffffff;
+}
+
+.banca-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 12px;
+}
+
+.banca-tab-btn {
+  padding: 9px 16px;
+  border-radius: 12px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.banca-tab-btn:hover {
+  color: #ffffff;
+  border-color: rgba(168, 85, 247, 0.4);
+}
+
+.banca-tab-btn.active {
+  background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+  color: #ffffff;
+  border-color: transparent;
+  box-shadow: 0 6px 18px rgba(139, 92, 246, 0.35);
+}
+
+.banca-content-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+@media (max-width: 960px) {
+  .banca-content-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.banca-card {
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.banca-card h4 {
+  font-size: 1rem;
+  color: #f8fafc;
+}
+
+.banca-text {
+  font-size: 0.84rem;
+  line-height: 1.55;
+  color: #cbd5e1;
+}
+
+.banca-list {
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.83rem;
+  line-height: 1.5;
+  color: #cbd5e1;
+}
+
+.banca-list code,
+.banca-text code {
+  background: rgba(139, 92, 246, 0.18);
+  color: #e9d5ff;
+  padding: 1px 6px;
+  border-radius: 5px;
+  font-size: 0.78rem;
+}
+
+.banca-chart-img {
+  width: 100%;
+  max-height: 235px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.banca-live-box {
+  background: rgba(5, 5, 10, 0.75);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.banca-badge-ok {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.14);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.banca-code-preview {
+  background: #060609;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 12px;
+  font-size: 0.76rem;
+  color: #a5b4fc;
+  overflow-x: auto;
+  line-height: 1.45;
+}
