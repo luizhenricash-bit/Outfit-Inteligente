@@ -664,14 +664,9 @@ export default function App() {
         </main>
       )}
 
-      {/* RODAPÉ SEMÂNTICO (HTML5 FOOTER — CHECKLIST DESIGN WEB EXPOTECH) */}
+      {/* RODAPÉ SEMÂNTICO (HTML5 FOOTER) */}
       <footer className="app-footer">
-        <p>
-          <strong>Outfit Inteligente</strong> • Projeto Acadêmico Expotech (Design Web, Backend & Machine Learning)
-        </p>
-        <p style={{ fontSize: "0.74rem", color: "#64748b" }}>
-          Semântica HTML5 • Psicologia Cognitiva (Leis de Hick, Fitts & Miller) • Clima Ao Vivo via Open-Meteo API
-        </p>
+        <p>© 2026 Outfit Inteligente. Todos os direitos reservados.</p>
       </footer>
     </div>
   );
