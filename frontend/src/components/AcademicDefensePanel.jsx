@@ -202,7 +202,7 @@ export default function AcademicDefensePanel({
           <div className="banca-card">
             <h4>🤖 Rigging 2.5D & State Machine (<code>RobotMascotRive.jsx</code>)</h4>
             <p className="banca-text">
-              Para eliminar o aspecto estático de templates gerados por IA, implementamos um mascote interativo inspirado no motor <strong>Rive</strong>:
+              Para enriquecer a Interação Humano-Computador (IHC) e criar uma identidade visual autoral, desenvolvemos um mascote interativo inspirado no motor <strong>Rive</strong>:
             </p>
             <ul className="banca-list">
               <li>

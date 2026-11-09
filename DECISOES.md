@@ -204,7 +204,7 @@ Ideias registradas para depois do trabalho, caso o projeto seja validado com usu
 ### ADR-016: Fluxo em 2 Atos (Rolagem Suave para o Provador) + Botão "Modo Banca"
 - **Data:** 2026-11-08
 - **Status:** Aceito
-- **Contexto:** Exibir siglas técnicas (`Cluster 0`, `K=3`, `Formalidade 4/5`) o tempo todo deixava a interface com aspecto de painel gerado por IA, enquanto manter o texto de recomendação no topo fazia com que o usuário não o visse quando a tela descia para o Provador.
+- **Contexto:** Exibir siglas matemáticas (`Cluster 0`, `K=3`, `Formalidade 4/5`) o tempo todo poluía a experiência do usuário final, enquanto manter o texto de recomendação no topo fazia com que o usuário não o visse quando a tela descia para o Provador.
 - **Decisão:**
   1. **Fluxo em 2 Atos:** A tela inicial no topo exibe apenas o Mascote Animado + caixa de pedido. Ao clicar em *"Montar Meu Look"*, a página desliza suavemente (`scrollIntoView({ behavior: "smooth" })`) para o Provador, onde o Mascote Animado aparece ao lado de um balão de fala entregando a recomendação.
   2. **Modo Banca (`🎓 Modo Banca`):** As métricas internas do Scikit-Learn K-Means ficam ocultas por padrão para manter o visual de produto real de moda e podem ser ativadas com 1 clique no cabeçalho durante a apresentação acadêmica.
